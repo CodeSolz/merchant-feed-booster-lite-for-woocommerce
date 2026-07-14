@@ -3,7 +3,7 @@
  * Plugin Name: Merchant Feed Booster Lite for WooCommerce
  * Plugin URI:  http://codesolz.net/our-products/wordpress-plugin/merchant-feed-booster-lite-for-woocommerce
  * Description: Know exactly why your WooCommerce products are rejected or underperforming on Google Shopping then fix them. Audits every product against 25 policy rules, assigns a health score (0–100), and provides specific fix hints for every issue, plus a reliable Google Merchant XML feed with automatic refresh.
- * Version:     1.0.0
+ * Version:     1.0.1
  * Author:      CodeSolz
  * Author URI:  http://codesolz.net
  * License:     GPL-2.0-or-later
@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'CS_MFB_VERSION', '2.0.0' );
+define( 'CS_MFB_VERSION', '1.0.1' );
 define( 'CS_MFB_PLUGIN_FILE', __FILE__ );
 define( 'CS_MFB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'CS_MFB_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
