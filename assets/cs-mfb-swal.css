@@ -1,0 +1,165 @@
+/* ── CsMfbSwal – bundled modal styles ─────────────────────────── */
+
+.cs-sw-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 999990;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0);
+    transition: background 0.28s ease;
+}
+.cs-sw-backdrop--in {
+    background: rgba(17, 24, 39, 0.55);
+    backdrop-filter: blur(3px);
+}
+
+.cs-sw-popup {
+    position: relative;
+    background: #fff;
+    border-radius: 18px;
+    padding: 36px 32px 28px;
+    width: min(440px, calc(100vw - 40px));
+    box-shadow:
+        0 4px 6px -1px rgba(0,0,0,.08),
+        0 20px 60px -10px rgba(0,0,0,.22);
+    text-align: center;
+    transform: scale(.82) translateY(-24px);
+    opacity: 0;
+    transition:
+        transform .3s cubic-bezier(.34,1.56,.64,1),
+        opacity .22s ease;
+}
+.cs-sw-popup--in {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+}
+
+/* ── Icon wrapper ──────────────────────────────────────────────── */
+.cs-sw-icon-wrap {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 18px;
+}
+.cs-sw-svg {
+    width: 40px;
+    height: 40px;
+    overflow: visible;
+}
+
+/* Icon colour schemes */
+.cs-sw-icon--success  { background: #f0fdf4; }
+.cs-sw-ring--success  { stroke: #16a34a; }
+.cs-sw-mark--success  { stroke: #16a34a; }
+
+.cs-sw-icon--error    { background: #fef2f2; }
+.cs-sw-ring--error    { stroke: #dc2626; }
+.cs-sw-mark--error    { stroke: #dc2626; }
+
+.cs-sw-icon--warning  { background: #fffbeb; }
+.cs-sw-ring--warning  { stroke: #d97706; }
+.cs-sw-mark--warning  { stroke: #d97706; }
+.cs-sw-dot--warning   { fill: #d97706; }
+
+.cs-sw-icon--info     { background: #eff6ff; }
+.cs-sw-ring--info     { stroke: #2563eb; }
+.cs-sw-mark--info     { stroke: #2563eb; }
+.cs-sw-dot--info      { fill: #2563eb; }
+
+.cs-sw-icon--question { background: #f5f3ff; }
+.cs-sw-ring--question { stroke: #7c3aed; }
+.cs-sw-question       { fill: #7c3aed; font-family: -apple-system, sans-serif; }
+
+.cs-sw-icon--loading  { background: #f9fafb; }
+
+/* ── Text ──────────────────────────────────────────────────────── */
+.cs-sw-title {
+    margin: 0 0 10px;
+    font-size: 19px;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.3;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.cs-sw-body {
+    margin: 0 0 24px;
+    font-size: 14px;
+    color: #4b5563;
+    line-height: 1.65;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.cs-sw-body strong { color: #111827; }
+
+/* ── Buttons ───────────────────────────────────────────────────── */
+.cs-sw-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+.cs-sw-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 108px;
+    padding: 10px 22px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all .18s ease;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    letter-spacing: .01em;
+}
+.cs-sw-btn--confirm {
+    background: #4f46e5;
+    color: #fff;
+}
+.cs-sw-btn--confirm:hover {
+    background: #4338ca;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(79, 70, 229, .4);
+}
+.cs-sw-btn--confirm:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+.cs-sw-btn--cancel {
+    background: #f3f4f6;
+    color: #374151;
+}
+.cs-sw-btn--cancel:hover {
+    background: #e5e7eb;
+}
+
+/* ── Loading spinner ───────────────────────────────────────────── */
+.cs-sw-spinner {
+    display: inline-block;
+    position: relative;
+    width: 44px;
+    height: 44px;
+}
+.cs-sw-spinner div {
+    box-sizing: border-box;
+    display: block;
+    position: absolute;
+    width: 34px;
+    height: 34px;
+    margin: 5px;
+    border: 3px solid transparent;
+    border-top-color: #4f46e5;
+    border-radius: 50%;
+    animation: cs-sw-spin 1s cubic-bezier(.5,0,.5,1) infinite;
+}
+.cs-sw-spinner div:nth-child(1) { animation-delay: -.45s; }
+.cs-sw-spinner div:nth-child(2) { animation-delay: -.3s; }
+.cs-sw-spinner div:nth-child(3) { animation-delay: -.15s; }
+@keyframes cs-sw-spin {
+    to { transform: rotate(360deg); }
+}
