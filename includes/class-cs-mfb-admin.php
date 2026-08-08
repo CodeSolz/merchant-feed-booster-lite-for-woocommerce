@@ -30,7 +30,6 @@ class CodeSolz_MFB_Admin {
 		add_action( 'admin_post_' . self::CSV_EXPORT_ACTION, array( __CLASS__, 'handle_csv_export' ) );
 		add_action( 'admin_post_' . self::CLEAR_CACHE_ACTION, array( __CLASS__, 'handle_clear_cache' ) );
 		add_action( 'add_meta_boxes', array( __CLASS__, 'register_product_score_metabox' ) );
-		do_action( 'cs_mfb_register_admin_pages' );
 	}
 
 	/**
@@ -39,7 +38,8 @@ class CodeSolz_MFB_Admin {
 	public static function menu() {
 		$cap = self::cap();
 
-		add_menu_page(
+		$hooks   = array();
+		$hooks[] = add_menu_page(
 			__( 'Feed Booster', 'merchant-feed-booster-lite-for-woocommerce' ),
 			__( 'Feed Booster', 'merchant-feed-booster-lite-for-woocommerce' ),
 			$cap,
@@ -49,7 +49,7 @@ class CodeSolz_MFB_Admin {
 			58
 		);
 
-		add_submenu_page(
+		$hooks[] = add_submenu_page(
 			self::MENU_SLUG,
 			__( 'Dashboard', 'merchant-feed-booster-lite-for-woocommerce' ),
 			__( 'Dashboard', 'merchant-feed-booster-lite-for-woocommerce' ),
@@ -58,7 +58,7 @@ class CodeSolz_MFB_Admin {
 			array( __CLASS__, 'render_dashboard' )
 		);
 
-		add_submenu_page(
+		$hooks[] = add_submenu_page(
 			self::MENU_SLUG,
 			__( 'Settings', 'merchant-feed-booster-lite-for-woocommerce' ),
 			__( 'Settings', 'merchant-feed-booster-lite-for-woocommerce' ),
@@ -67,7 +67,7 @@ class CodeSolz_MFB_Admin {
 			array( __CLASS__, 'render_settings' )
 		);
 
-		add_submenu_page(
+		$hooks[] = add_submenu_page(
 			self::MENU_SLUG,
 			__( 'Feed Health', 'merchant-feed-booster-lite-for-woocommerce' ),
 			__( 'Feed Health', 'merchant-feed-booster-lite-for-woocommerce' ),
@@ -76,7 +76,7 @@ class CodeSolz_MFB_Admin {
 			array( __CLASS__, 'render_health' )
 		);
 
-		add_submenu_page(
+		$hooks[] = add_submenu_page(
 			self::MENU_SLUG,
 			__( 'Feed Preview', 'merchant-feed-booster-lite-for-woocommerce' ),
 			__( 'Feed Preview', 'merchant-feed-booster-lite-for-woocommerce' ),
@@ -85,6 +85,70 @@ class CodeSolz_MFB_Admin {
 			array( __CLASS__, 'render_preview' )
 		);
 
+		foreach ( $hooks as $hook ) {
+			if ( $hook ) {
+				add_action( 'load-' . $hook, array( __CLASS__, 'suppress_foreign_admin_notices' ) );
+			}
+		}
+
+		/**
+		 * Fires from inside the admin_menu callback (i.e. once WordPress is
+		 * actually building the admin menu), NOT at plugins_loaded time —
+		 * so extensions can register their own add_action( 'admin_menu', ... )
+		 * here and still run before WordPress finishes processing admin_menu,
+		 * regardless of plugin load order or plugins_loaded priority.
+		 */
+		do_action( 'cs_mfb_register_admin_pages' );
+	}
+
+	/**
+	 * On our own admin pages, strip admin notices registered by other
+	 * plugins/themes so only this plugin's own hero/notice UI is shown.
+	 */
+	public static function suppress_foreign_admin_notices() {
+		add_action( 'admin_notices', array( __CLASS__, 'strip_foreign_notices' ), 0 );
+		add_action( 'all_admin_notices', array( __CLASS__, 'strip_foreign_notices' ), 0 );
+	}
+
+	/**
+	 * Remove any admin_notices/all_admin_notices callbacks that don't
+	 * belong to this plugin, right before WordPress prints them.
+	 */
+	public static function strip_foreign_notices() {
+		global $wp_filter;
+
+		foreach ( array( 'admin_notices', 'all_admin_notices' ) as $tag ) {
+			if ( empty( $wp_filter[ $tag ] ) || ! isset( $wp_filter[ $tag ]->callbacks ) ) {
+				continue;
+			}
+
+			foreach ( $wp_filter[ $tag ]->callbacks as $priority => $callbacks ) {
+				foreach ( $callbacks as $id => $cb ) {
+					if ( ! self::is_own_notice_callback( $cb['function'] ) ) {
+						unset( $wp_filter[ $tag ]->callbacks[ $priority ][ $id ] );
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * Whether a hooked callback belongs to this plugin.
+	 *
+	 * @param callable $function Callback registered on admin_notices.
+	 * @return bool
+	 */
+	protected static function is_own_notice_callback( $function ) {
+		if ( is_array( $function ) ) {
+			$target = is_object( $function[0] ) ? get_class( $function[0] ) : (string) $function[0];
+			return 0 === strpos( $target, 'CodeSolz_MFB' );
+		}
+
+		if ( is_string( $function ) ) {
+			return 0 === strpos( $function, 'cs_mfb_' );
+		}
+
+		return false;
 	}
 
 	/**
@@ -575,10 +639,10 @@ class CodeSolz_MFB_Admin {
 		// Activity log.
 		$activity_log = get_option( 'cs_mfb_activity_log', array() );
 
-		// ── Feed URL accessibility check.
+		// ── Feed URL accessibility check (real HTTP check, cached 15 min).
 		$feed_accessible = false;
 		if ( $feed_url && $feed_exists ) {
-			$feed_accessible = true; // Assume accessible if file exists; real check would hit HTTP.
+			$feed_accessible = CodeSolz_MFB_Feed_Generator::is_publicly_accessible( $feed_url );
 		}
 
 		// ── Last generated display string.
@@ -1805,12 +1869,25 @@ class CodeSolz_MFB_Admin {
 		}
 		echo '</div>';
 
+		/**
+		 * Fires right before the health table (and any empty-state message),
+		 * after the filter tabs. Pro uses this to render a bulk-actions toolbar.
+		 *
+		 * @param array $report Full scan report for the current page/filter.
+		 */
+		do_action( 'cs_mfb_health_table_before', $report );
+
 		// ── Products table ────────────────────────────────────────────────
 		if ( empty( $report['rows'] ) ) {
 			echo '<div class="cs-mfb-empty">' . esc_html__( 'No products match this filter. Run a scan first or try a different filter.', 'merchant-feed-booster-lite-for-woocommerce' ) . '</div>';
 		} else {
 			echo '<div class="cs-mfb-table-wrap"><table class="widefat cs-mfb-health-table">';
 			echo '<thead><tr>';
+			/**
+			 * Fires as the first cell of the table header row. Pro uses this
+			 * to add a "select all" checkbox column for bulk actions.
+			 */
+			do_action( 'cs_mfb_health_table_head' );
 			echo '<th class="col-product">' . esc_html__( 'Product', 'merchant-feed-booster-lite-for-woocommerce' ) . '</th>';
 			echo '<th class="col-score">' . esc_html__( 'Score', 'merchant-feed-booster-lite-for-woocommerce' ) . '</th>';
 			echo '<th class="col-issues">' . esc_html__( 'Feed Status / Issues', 'merchant-feed-booster-lite-for-woocommerce' ) . '</th>';
@@ -1827,6 +1904,14 @@ class CodeSolz_MFB_Admin {
 				$thumb_url  = get_the_post_thumbnail_url( (int) $row['id'], array( 40, 40 ) );
 
 				echo '<tr class="cs-mfb-product-row">';
+
+				/**
+				 * Fires as the first cell of each product row, immediately after
+				 * the row is opened. Pro uses this to add a bulk-select checkbox.
+				 *
+				 * @param array $row Row data (id, title, sku, score, tier, issues, edit, link).
+				 */
+				do_action( 'cs_mfb_health_table_row_start', $row );
 
 				// Product column: thumbnail + name
 				echo '<td class="col-product">';
@@ -1871,7 +1956,7 @@ class CodeSolz_MFB_Admin {
 
 				if ( ! empty( $issues ) ) {
 					echo '<tr id="' . esc_attr( $detail_id ) . '" class="cs-mfb-detail-row" hidden>';
-					echo '<td colspan="6"><ul class="cs-mfb-issue-list">';
+					echo '<td colspan="' . (int) apply_filters( 'cs_mfb_health_table_colspan', 6 ) . '"><ul class="cs-mfb-issue-list">';
 					foreach ( $issues as $issue ) {
 						printf(
 							'<li class="cs-mfb-issue-item"><span class="cs-mfb-sev cs-mfb-sev--%s">%s</span> <strong>%s</strong> — %s <em class="cs-mfb-fix-hint">%s %s</em></li>',

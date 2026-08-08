@@ -30,6 +30,7 @@ class CodeSolz_MFB_Product_Fields {
 		add_action( 'woocommerce_product_options_general_product_data', array( __CLASS__, 'render_fields' ) );
 		add_action( 'woocommerce_admin_process_product_object', array( __CLASS__, 'save_via_product_object' ) );
 		add_action( 'admin_notices', array( __CLASS__, 'show_gtin_notice' ) );
+		add_action( 'save_post_product', array( 'CodeSolz_MFB_Health', 'clear_duplicate_index' ) );
 	}
 
 	/**

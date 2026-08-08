@@ -19,6 +19,8 @@ delete_option( 'cs_mfb_activity_log' );
 
 // Remove transients.
 delete_transient( 'cs_mfb_scan_state' );
+delete_transient( 'cs_mfb_dup_index' );
+delete_transient( 'cs_mfb_feed_reachable' );
 
 // Remove per-user GTIN notice transients.
 // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -39,6 +41,8 @@ $wpdb->query( "DROP TABLE IF EXISTS `{$table}`" );
 $meta_keys = array(
 	'_cs_mfb_health_score',
 	'_cs_mfb_health_score_ts',
+	'_cs_mfb_has_issues',
+	'_cs_mfb_clean_description',
 	'_cs_mfb_img_dims_cache',
 	'_cs_mfb_brand',
 	'_cs_mfb_gtin',

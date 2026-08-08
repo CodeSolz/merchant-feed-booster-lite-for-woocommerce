@@ -13,7 +13,7 @@ Most Google Shopping feed plugins just export an XML file and leave you guessing
 It does two things:
 
 1. **Generates a reliable Google Merchant XML feed** for your WooCommerce store — automatically, on a schedule, written safely to disk.
-2. **Audits every product against 25 Google Merchant Center policy rules**, gives each product a health score from 0 to 100, and tells you exactly what to fix and why — before Google rejects it.
+2. **Audits every product against 27 Google Merchant Center policy rules**, gives each product a health score from 0 to 100, and tells you exactly what to fix and why — before Google rejects it.
 
 The result: you upload a feed that actually passes, and you know which products to fix first.
 
@@ -79,11 +79,11 @@ Store-wide defaults for brand and Google category can be set in Settings and are
 
 ---
 
-### 3. Feed Health — 25 Policy Rules
+### 3. Feed Health — 27 Policy Rules
 
-Every product in your catalog is scored from **0 to 100** and checked against 25 named rules that mirror Google Merchant Center's content requirements.
+Every product in your catalog is scored from **0 to 100** and checked against 27 named rules that mirror Google Merchant Center's content requirements.
 
-#### Title rules (T01–T08)
+#### Title rules (T01–T09)
 | Rule | What it catches |
 |---|---|
 | T01 | Title shorter than 25 characters — too short for meaningful ad targeting |
@@ -94,6 +94,7 @@ Every product in your catalog is scored from **0 to 100** and checked against 25
 | T06 | Price mentioned in the title — not allowed by Google |
 | T07 | Special characters at the start or end of the title |
 | T08 | Repeated words in the title |
+| T09 | Same title used by another product in the store — duplicate content |
 
 #### Image rules (I01–I05)
 | Rule | What it catches |
@@ -112,13 +113,14 @@ Every product in your catalog is scored from **0 to 100** and checked against 25
 | P03 | Sale price is equal to or greater than the regular price |
 | P04 | Non-numeric price value |
 
-#### Identifier rules (ID01–ID04)
+#### Identifier rules (ID01–ID05)
 | Rule | What it catches |
 |---|---|
 | ID01 | GTIN has wrong digit count (valid lengths: 8, 12, 13, 14) |
 | ID02 | GTIN fails the GS1 check digit algorithm — structurally invalid |
 | ID03 | Brand is set but neither GTIN nor MPN is provided |
 | ID04 | No brand set — required for most product categories |
+| ID05 | GTIN or MPN already used by another product in the store |
 
 #### Description rules (D01–D04)
 | Rule | What it catches |
@@ -266,7 +268,7 @@ Used internally by the admin UI's background scan progress bar. All endpoints re
 | `cs_mfb_should_include_product` | `$include, $product, $settings` | Return `false` to exclude a product from the feed |
 | `cs_mfb_item_data` | `$data, $product, $settings` | Modify any feed field before it is written to XML |
 | `cs_mfb_extra_item_fields` | `$fields, $product, $settings` | Add extra `g:*` fields to a feed item |
-| `cs_mfb_policy_rules` | `$rules, $product` | Add, remove, or modify the 25 policy rules |
+| `cs_mfb_policy_rules` | `$rules, $product` | Add, remove, or modify the 27 policy rules |
 | `cs_mfb_score_weights` | `$weights` | Adjust the weight each rule contributes to the 0–100 score |
 | `cs_mfb_health_table_columns` | `$columns` | Add extra columns to the Feed Health table |
 | `cs_mfb_include_hidden` | `$bool, $product` | Include catalog-hidden products in the feed (default: false) |
@@ -330,7 +332,7 @@ merchant-feed-booster-lite-for-woocommerce/
     ├── class-cs-mfb-product-fields.php  # Brand/GTIN/MPN/category/condition meta fields
     ├── class-cs-mfb-gtin-validator.php  # GS1 check digit (Luhn-based) validation
     ├── class-cs-mfb-image-checker.php   # Image dimension fetching and caching
-    ├── class-cs-mfb-policy-engine.php   # All 25 named policy rules
+    ├── class-cs-mfb-policy-engine.php   # All 27 named policy rules
     ├── class-cs-mfb-health-score.php    # 0–100 scoring, tier labels, audit cache table
     ├── class-cs-mfb-health.php          # Scan orchestration, report building, CSV export
     ├── class-cs-mfb-scan-runner.php     # Background batch scanning via transients

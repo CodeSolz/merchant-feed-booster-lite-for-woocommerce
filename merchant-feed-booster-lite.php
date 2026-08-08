@@ -2,8 +2,8 @@
 /**
  * Plugin Name: Merchant Feed Booster Lite for WooCommerce
  * Plugin URI:  http://codesolz.net/our-products/wordpress-plugin/merchant-feed-booster-lite-for-woocommerce
- * Description: Know exactly why your WooCommerce products are rejected or underperforming on Google Shopping then fix them. Audits every product against 25 policy rules, assigns a health score (0–100), and provides specific fix hints for every issue, plus a reliable Google Merchant XML feed with automatic refresh.
- * Version:     1.0.1
+ * Description: Know exactly why your WooCommerce products are rejected or underperforming on Google Shopping then fix them. Audits every product against 27 policy rules, assigns a health score (0–100), and provides specific fix hints for every issue, plus a reliable Google Merchant XML feed with automatic refresh.
+ * Version:     1.0.2
  * Author:      CodeSolz
  * Author URI:  http://codesolz.net
  * License:     GPL-2.0-or-later
@@ -14,7 +14,7 @@
  * Requires PHP: 7.4
  * Requires Plugins: woocommerce
  * WC requires at least: 6.0
- * WC tested up to: 8.5
+ * WC tested up to: 11.0
  *
  * @package CodeSolz_MFB
  */
@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'CS_MFB_VERSION', '1.0.1' );
+define( 'CS_MFB_VERSION', '1.0.2' );
 define( 'CS_MFB_PLUGIN_FILE', __FILE__ );
 define( 'CS_MFB_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'CS_MFB_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -35,6 +35,7 @@ define( 'CS_MFB_CRON_HOOK', 'cs_mfb_refresh_feed_cron' );
 // v2.0 constants
 define( 'CS_MFB_SCORE_META_KEY', '_cs_mfb_health_score' );
 define( 'CS_MFB_SCORE_META_TIMESTAMP', '_cs_mfb_health_score_ts' );
+define( 'CS_MFB_HAS_ISSUES_META_KEY', '_cs_mfb_has_issues' );
 define( 'CS_MFB_IMG_CACHE_META_KEY', '_cs_mfb_img_dims_cache' );
 define( 'CS_MFB_SCAN_TRANSIENT', 'cs_mfb_scan_state' );
 define( 'CS_MFB_REST_NAMESPACE', 'cs-mfb/v1' );
@@ -57,6 +58,8 @@ require_once CS_MFB_PLUGIN_DIR . 'includes/class-cs-mfb-feed-preview.php';
 require_once CS_MFB_PLUGIN_DIR . 'includes/class-cs-mfb-health.php';
 require_once CS_MFB_PLUGIN_DIR . 'includes/class-cs-mfb-cron.php';
 require_once CS_MFB_PLUGIN_DIR . 'includes/class-cs-mfb-admin.php';
+require_once CS_MFB_PLUGIN_DIR . 'includes/class-cs-mfb-product-list.php';
+require_once CS_MFB_PLUGIN_DIR . 'includes/class-cs-mfb-site-health.php';
 
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	require_once CS_MFB_PLUGIN_DIR . 'includes/class-cs-mfb-cli.php';

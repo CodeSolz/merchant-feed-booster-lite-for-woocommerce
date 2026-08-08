@@ -13,6 +13,60 @@ class CodeSolz_MFB_Health {
 
 	const SCAN_LIMIT    = 5000;
 	const DISPLAY_LIMIT = 50; // per page in UI
+	const DUP_INDEX_TRANSIENT = 'cs_mfb_dup_index';
+
+	/**
+	 * Build a store-wide index of duplicate GTIN/MPN values and duplicate titles.
+	 *
+	 * Cached because it requires two extra queries across the whole catalog;
+	 * callers should fetch this once per scan pass, not per product.
+	 *
+	 * @return array{gtin: array<string,int>, mpn: array<string,int>, title: array<string,int>}
+	 */
+	public static function build_duplicate_index() {
+		$cached = get_transient( self::DUP_INDEX_TRANSIENT );
+		if ( is_array( $cached ) ) {
+			return $cached;
+		}
+
+		global $wpdb;
+
+		$index = array(
+			'gtin'  => array(),
+			'mpn'   => array(),
+			'title' => array(),
+		);
+
+		foreach ( array( 'gtin' => '_cs_mfb_gtin', 'mpn' => '_cs_mfb_mpn' ) as $key => $meta_key ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$values = $wpdb->get_col( $wpdb->prepare(
+				"SELECT pm.meta_value FROM {$wpdb->postmeta} pm
+				 INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
+				 WHERE pm.meta_key = %s AND pm.meta_value != '' AND p.post_type = 'product' AND p.post_status = 'publish'",
+				$meta_key
+			) );
+			$index[ $key ] = array_filter( array_count_values( $values ), fn( $count ) => $count > 1 );
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$titles = $wpdb->get_col(
+			"SELECT post_title FROM {$wpdb->posts} WHERE post_type = 'product' AND post_status = 'publish'"
+		);
+		$normalized   = array_map( fn( $t ) => strtolower( trim( wp_strip_all_tags( $t ) ) ), $titles );
+		$normalized   = array_filter( $normalized );
+		$index['title'] = array_filter( array_count_values( $normalized ), fn( $count ) => $count > 1 );
+
+		set_transient( self::DUP_INDEX_TRANSIENT, $index, CS_MFB_SCAN_CACHE_TTL );
+
+		return $index;
+	}
+
+	/**
+	 * Clear the cached duplicate index so it's rebuilt on the next scan.
+	 */
+	public static function clear_duplicate_index() {
+		delete_transient( self::DUP_INDEX_TRANSIENT );
+	}
 
 	/**
 	 * Synchronous scan used for small catalogs (<= SCAN_LIMIT).
@@ -31,6 +85,7 @@ class CodeSolz_MFB_Health {
 	public static function scan( array $args = array() ) {
 		$settings    = CodeSolz_MFB_Settings::all();
 		$include_oos = ! empty( $settings['include_oos'] );
+		$dup_index   = self::build_duplicate_index();
 
 		$current_page      = max( 1, (int) ( $args['page'] ?? 1 ) );
 		$per_page          = (int) ( $args['per_page'] ?? self::DISPLAY_LIMIT );
@@ -99,7 +154,7 @@ class CodeSolz_MFB_Health {
 					$score  = $cached['score'];
 					$issues = $cached['issues'];
 				} else {
-					$issues = CodeSolz_MFB_Policy_Engine::run_all( $product, $settings );
+					$issues = CodeSolz_MFB_Policy_Engine::run_all( $product, $settings, $dup_index );
 					$score  = CodeSolz_MFB_Health_Score::calculate( $product, $issues, $settings );
 					CodeSolz_MFB_Health_Score::store( $product_id, $score, $issues, $hash );
 				}
@@ -211,11 +266,12 @@ class CodeSolz_MFB_Health {
 	}
 
 	/**
-	 * Stream an enhanced CSV (25-rule columns) to the browser and exit.
+	 * Stream an enhanced CSV (27-rule columns) to the browser and exit.
 	 */
 	public static function stream_csv() {
 		$settings    = CodeSolz_MFB_Settings::all();
 		$include_oos = ! empty( $settings['include_oos'] );
+		$dup_index   = self::build_duplicate_index();
 
 		nocache_headers();
 		header( 'Content-Type: text/csv; charset=utf-8' );
@@ -227,10 +283,10 @@ class CodeSolz_MFB_Health {
 		}
 
 		$rule_ids = array(
-			'RULE-T01','RULE-T02','RULE-T03','RULE-T04','RULE-T05','RULE-T06','RULE-T07','RULE-T08',
+			'RULE-T01','RULE-T02','RULE-T03','RULE-T04','RULE-T05','RULE-T06','RULE-T07','RULE-T08','RULE-T09',
 			'RULE-I01','RULE-I02','RULE-I03','RULE-I04','RULE-I05',
 			'RULE-P01','RULE-P02','RULE-P03','RULE-P04',
-			'RULE-ID01','RULE-ID02','RULE-ID03','RULE-ID04',
+			'RULE-ID01','RULE-ID02','RULE-ID03','RULE-ID04','RULE-ID05',
 			'RULE-D01','RULE-D02','RULE-D03','RULE-D04',
 		);
 
@@ -280,7 +336,7 @@ class CodeSolz_MFB_Health {
 					$score  = $cached['score'];
 					$issues = $cached['issues'];
 				} else {
-					$issues = CodeSolz_MFB_Policy_Engine::run_all( $product, $settings );
+					$issues = CodeSolz_MFB_Policy_Engine::run_all( $product, $settings, $dup_index );
 					$score  = CodeSolz_MFB_Health_Score::calculate( $product, $issues, $settings );
 					CodeSolz_MFB_Health_Score::store( $product_id, $score, $issues, $hash );
 				}

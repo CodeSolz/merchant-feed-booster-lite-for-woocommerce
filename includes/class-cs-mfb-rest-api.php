@@ -128,8 +128,9 @@ class CodeSolz_MFB_REST_API {
 			$score  = $cached['score'];
 			$issues = $cached['issues'];
 		} else {
-			$issues = CodeSolz_MFB_Policy_Engine::run_all( $product, $settings );
-			$score  = CodeSolz_MFB_Health_Score::calculate( $product, $issues, $settings );
+			$dup_index = CodeSolz_MFB_Health::build_duplicate_index();
+			$issues    = CodeSolz_MFB_Policy_Engine::run_all( $product, $settings, $dup_index );
+			$score     = CodeSolz_MFB_Health_Score::calculate( $product, $issues, $settings );
 			CodeSolz_MFB_Health_Score::store( $product_id, $score, $issues, $hash );
 		}
 

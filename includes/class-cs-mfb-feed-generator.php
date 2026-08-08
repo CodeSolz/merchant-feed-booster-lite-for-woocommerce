@@ -65,6 +65,53 @@ class CodeSolz_MFB_Feed_Generator {
 	}
 
 	/**
+	 * Check whether the public feed URL actually responds over HTTP.
+	 *
+	 * Mirrors WordPress core's own loopback-request pattern (see
+	 * WP_Site_Health::get_test_loopback_requests()) — same-origin check, so SSL
+	 * verification is skipped to avoid false negatives on local/self-signed setups.
+	 * Result is cached for 15 minutes so the dashboard doesn't fire a request per page load.
+	 *
+	 * @param string $url Public feed URL.
+	 * @return bool
+	 */
+	public static function is_publicly_accessible( $url ) {
+		if ( ! $url ) {
+			return false;
+		}
+
+		$cache_key = 'cs_mfb_feed_reachable';
+		$cached    = get_transient( $cache_key );
+		if ( false !== $cached ) {
+			return 'yes' === $cached;
+		}
+
+		$args = array(
+			'timeout'   => 5,
+			'sslverify' => apply_filters( 'https_local_ssl_verify', false ),
+		);
+
+		$response = wp_remote_head( $url, $args );
+		if ( is_wp_error( $response ) || 200 !== (int) wp_remote_retrieve_response_code( $response ) ) {
+			// Some servers reject HEAD requests; fall back to a lightweight GET.
+			$response = wp_remote_get( $url, $args );
+		}
+
+		$accessible = ! is_wp_error( $response ) && 200 === (int) wp_remote_retrieve_response_code( $response );
+
+		set_transient( $cache_key, $accessible ? 'yes' : 'no', 15 * MINUTE_IN_SECONDS );
+
+		return $accessible;
+	}
+
+	/**
+	 * Clear the cached feed-accessibility result so the next dashboard load re-checks it.
+	 */
+	public static function clear_accessibility_cache() {
+		delete_transient( 'cs_mfb_feed_reachable' );
+	}
+
+	/**
 	 * Make sure the feed directory exists and contains a privacy index.html.
 	 *
 	 * @return string|WP_Error Directory path or error.
@@ -195,6 +242,8 @@ class CodeSolz_MFB_Feed_Generator {
 			return new WP_Error( 'cs_mfb_rename_failed', __( 'Could not finalize feed file.', 'merchant-feed-booster-lite-for-woocommerce' ) );
 		}
 
+		self::clear_accessibility_cache();
+
 		update_option(
 			self::LAST_RUN_KEY,
 			array(
@@ -226,11 +275,16 @@ class CodeSolz_MFB_Feed_Generator {
 		$title_raw   = $product->get_name();
 		$prefix      = isset( $settings['feed_prefix'] ) ? trim( (string) $settings['feed_prefix'] ) : '';
 		$title       = $prefix !== '' ? trim( $prefix . ' ' . $title_raw ) : $title_raw;
-		$desc_raw    = $product->get_description();
-		if ( '' === trim( wp_strip_all_tags( (string) $desc_raw ) ) ) {
-			$desc_raw = $product->get_short_description();
+		$clean_override = get_post_meta( $id, '_cs_mfb_clean_description', true );
+		if ( '' !== $clean_override ) {
+			$desc = wp_strip_all_tags( (string) $clean_override );
+		} else {
+			$desc_raw = $product->get_description();
+			if ( '' === trim( wp_strip_all_tags( (string) $desc_raw ) ) ) {
+				$desc_raw = $product->get_short_description();
+			}
+			$desc = wp_strip_all_tags( (string) $desc_raw );
 		}
-		$desc        = wp_strip_all_tags( (string) $desc_raw );
 		$link        = get_permalink( $id );
 		$image_id    = $product->get_image_id();
 		$image_url   = $image_id ? wp_get_attachment_url( $image_id ) : '';

@@ -75,6 +75,7 @@ class CodeSolz_MFB_Plugin {
 		}
 
 		CodeSolz_MFB_Admin::register();
+		CodeSolz_MFB_Product_List::register();
 		CodeSolz_MFB_Settings::register();
 		add_filter( 'cron_schedules', array( 'CodeSolz_MFB_Settings', 'add_weekly_cron_schedule' ) );
 		CodeSolz_MFB_Product_Fields::register();
@@ -82,6 +83,7 @@ class CodeSolz_MFB_Plugin {
 		CodeSolz_MFB_Feed_Generator::register();
 		CodeSolz_MFB_REST_API::register();
 		CodeSolz_MFB_Image_Checker::register();
+		CodeSolz_MFB_Site_Health::register();
 
 		// Run DB upgrade if needed after a plugin update.
 		if ( get_option( 'cs_mfb_db_version' ) !== CS_MFB_VERSION ) {

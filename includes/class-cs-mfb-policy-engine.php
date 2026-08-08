@@ -1,6 +1,6 @@
 <?php
 /**
- * Policy engine: 25 named Google Merchant Center rule checks.
+ * Policy engine: 27 named Google Merchant Center rule checks.
  *
  * Each rule method returns an issue array or null (pass).
  * Issue array shape: { rule_id, severity, message, fix_hint }
@@ -15,19 +15,23 @@ if ( ! defined( 'ABSPATH' ) ) {
 class CodeSolz_MFB_Policy_Engine {
 
 	/**
-	 * Run all 25 rules against a product and return an array of issues.
+	 * Run all rules against a product and return an array of issues.
 	 *
-	 * @param WC_Product $product  WooCommerce product object.
-	 * @param array      $settings Plugin settings array.
+	 * @param WC_Product $product   WooCommerce product object.
+	 * @param array      $settings  Plugin settings array.
+	 * @param array      $dup_index Store-wide duplicate index from
+	 *                              CS_MFB_Health::build_duplicate_index() (optional; enables
+	 *                              the duplicate-title/GTIN/MPN checks when provided).
 	 * @return array Array of issue arrays (empty = no issues).
 	 */
-	public static function run_all( WC_Product $product, array $settings = array() ) {
-		$title       = $product->get_name();
-		$description = $product->get_description() ?: $product->get_short_description();
-		$image_id    = (int) $product->get_image_id();
-		$brand       = get_post_meta( $product->get_id(), '_cs_mfb_brand', true );
-		$gtin        = get_post_meta( $product->get_id(), '_cs_mfb_gtin', true );
-		$mpn         = get_post_meta( $product->get_id(), '_cs_mfb_mpn', true );
+	public static function run_all( WC_Product $product, array $settings = array(), array $dup_index = array() ) {
+		$title             = $product->get_name();
+		$clean_description = get_post_meta( $product->get_id(), '_cs_mfb_clean_description', true );
+		$description       = '' !== $clean_description ? $clean_description : ( $product->get_description() ?: $product->get_short_description() );
+		$image_id      = (int) $product->get_image_id();
+		$brand         = get_post_meta( $product->get_id(), '_cs_mfb_brand', true );
+		$gtin          = get_post_meta( $product->get_id(), '_cs_mfb_gtin', true );
+		$mpn           = get_post_meta( $product->get_id(), '_cs_mfb_mpn', true );
 		$default_brand = isset( $settings['default_brand'] ) ? $settings['default_brand'] : '';
 
 		$run_image_checks = ! isset( $settings['enable_image_checks'] ) || ! empty( $settings['enable_image_checks'] );
@@ -43,6 +47,7 @@ class CodeSolz_MFB_Policy_Engine {
 			self::check_title_price( $title ),
 			self::check_title_special_chars( $title ),
 			self::check_title_repeated_words( $title ),
+			self::check_title_duplicate( $title, $dup_index ),
 			// Image (gated by enable_image_checks)
 			self::check_image_missing( $image_id ),
 			$run_image_checks ? self::check_image_too_small( $product->get_id(), $image_id ) : null,
@@ -59,6 +64,7 @@ class CodeSolz_MFB_Policy_Engine {
 			$run_gtin_checks ? self::check_gtin_check_digit( $gtin ) : null,
 			$run_gtin_checks ? self::check_identifier_brand_no_gtin_mpn( $brand, $default_brand, $gtin, $mpn ) : null,
 			$run_gtin_checks ? self::check_identifier_no_brand( $brand, $default_brand ) : null,
+			$run_gtin_checks ? self::check_duplicate_identifier( $gtin, $mpn, $dup_index ) : null,
 			// Description
 			self::check_description_missing( $description ),
 			self::check_description_too_short( $description ),
@@ -204,6 +210,23 @@ class CodeSolz_MFB_Policy_Engine {
 		}
 
 		return null;
+	}
+
+	/** RULE-T09: Same title used by another product in the store. */
+	public static function check_title_duplicate( $title, array $dup_index ) {
+		if ( empty( $dup_index['title'] ) ) {
+			return null;
+		}
+		$normalized = strtolower( trim( wp_strip_all_tags( (string) $title ) ) );
+		if ( '' === $normalized || empty( $dup_index['title'][ $normalized ] ) ) {
+			return null;
+		}
+		return self::issue(
+			'RULE-T09', 'warning',
+			/* translators: %d = number of other products with the same title */
+			sprintf( __( 'This exact title is used by %d other product(s) in your store. Google treats near-identical listings as duplicate content.', 'merchant-feed-booster-lite-for-woocommerce' ), $dup_index['title'][ $normalized ] - 1 ),
+			__( 'Make the title unique — add distinguishing attributes like size, color, or material.', 'merchant-feed-booster-lite-for-woocommerce' )
+		);
 	}
 
 	// -------------------------------------------------------------------------
@@ -427,6 +450,32 @@ class CodeSolz_MFB_Policy_Engine {
 			__( 'No brand set for this product and no default brand configured. Brand is required for most Google product categories.', 'merchant-feed-booster-lite-for-woocommerce' ),
 			__( 'Add a brand to this product, or set a default brand in Merchant Feed → Settings.', 'merchant-feed-booster-lite-for-woocommerce' )
 		);
+	}
+
+	/** RULE-ID05: GTIN or MPN already used by another product. */
+	public static function check_duplicate_identifier( $gtin, $mpn, array $dup_index ) {
+		$gtin = trim( (string) $gtin );
+		$mpn  = trim( (string) $mpn );
+
+		if ( '' !== $gtin && ! empty( $dup_index['gtin'][ $gtin ] ) ) {
+			return self::issue(
+				'RULE-ID05', 'error',
+				/* translators: %1$s = GTIN value, %2$d = number of other products sharing it */
+				sprintf( __( 'GTIN "%1$s" is used by %2$d other product(s). Each product needs its own unique GTIN.', 'merchant-feed-booster-lite-for-woocommerce' ), esc_html( $gtin ), $dup_index['gtin'][ $gtin ] - 1 ),
+				__( 'Verify the GTIN against the product packaging — it may have been copied to the wrong product.', 'merchant-feed-booster-lite-for-woocommerce' )
+			);
+		}
+
+		if ( '' !== $mpn && ! empty( $dup_index['mpn'][ $mpn ] ) ) {
+			return self::issue(
+				'RULE-ID05', 'error',
+				/* translators: %1$s = MPN value, %2$d = number of other products sharing it */
+				sprintf( __( 'MPN "%1$s" is used by %2$d other product(s). Each distinct product needs its own MPN.', 'merchant-feed-booster-lite-for-woocommerce' ), esc_html( $mpn ), $dup_index['mpn'][ $mpn ] - 1 ),
+				__( 'Verify the MPN — it may have been copied to the wrong product, or these should be variations of one product.', 'merchant-feed-booster-lite-for-woocommerce' )
+			);
+		}
+
+		return null;
 	}
 
 	// -------------------------------------------------------------------------

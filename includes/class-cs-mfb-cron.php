@@ -23,6 +23,60 @@ class CodeSolz_MFB_Cron {
 
 		// Self-heal: if enabled but not scheduled, schedule it.
 		add_action( 'init', array( __CLASS__, 'maybe_schedule' ), 20 );
+
+		add_action( 'admin_notices', array( __CLASS__, 'maybe_render_staleness_notice' ) );
+	}
+
+	/**
+	 * Warn on our own admin pages when the feed hasn't refreshed for well
+	 * beyond its scheduled interval — usually means WP-Cron isn't firing
+	 * (low-traffic site with no real server cron configured).
+	 */
+	public static function maybe_render_staleness_notice() {
+		if ( ! current_user_can( CodeSolz_MFB_Admin::cap() ) ) {
+			return;
+		}
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( ! $screen || false === strpos( $screen->id, 'cs-mfb' ) ) {
+			return;
+		}
+		if ( ! CodeSolz_MFB_Plugin::is_wc_ready() ) {
+			return;
+		}
+
+		$settings = CodeSolz_MFB_Settings::all();
+		if ( empty( $settings['enabled'] ) ) {
+			return;
+		}
+
+		$last_run = get_option( CodeSolz_MFB_Feed_Generator::LAST_RUN_KEY );
+		if ( empty( $last_run['time'] ) ) {
+			return; // Never generated yet — the dashboard already flags "No feed yet".
+		}
+
+		$slug      = self::valid_frequency( $settings['refresh_frequency'] );
+		$schedules = wp_get_schedules();
+		$interval  = isset( $schedules[ $slug ]['interval'] ) ? (int) $schedules[ $slug ]['interval'] : DAY_IN_SECONDS;
+		$threshold = ( $interval * 2 ) + HOUR_IN_SECONDS;
+
+		$age = time() - (int) $last_run['time'];
+		if ( $age < $threshold ) {
+			return;
+		}
+
+		printf(
+			'<div class="notice notice-warning"><p><strong>%1$s</strong> %2$s <a href="%3$s">%4$s</a></p></div>',
+			esc_html__( 'Merchant Feed Booster:', 'merchant-feed-booster-lite-for-woocommerce' ),
+			esc_html(
+				sprintf(
+					/* translators: %s = human-readable time since the feed last refreshed */
+					__( 'Your Google Merchant feed hasn\'t refreshed in %s, well past its scheduled interval. WP-Cron only runs on site visits — if traffic is low, consider a real server cron.', 'merchant-feed-booster-lite-for-woocommerce' ),
+					human_time_diff( (int) $last_run['time'] )
+				)
+			),
+			esc_url( CodeSolz_MFB_Admin::regenerate_url() ),
+			esc_html__( 'Regenerate now', 'merchant-feed-booster-lite-for-woocommerce' )
+		);
 	}
 
 	/**

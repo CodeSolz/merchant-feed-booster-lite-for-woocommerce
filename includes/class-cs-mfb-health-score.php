@@ -35,8 +35,9 @@ class CodeSolz_MFB_Health_Score {
 		$score = 0;
 
 		// ---- BASE POINTS ----
-		$title       = $product->get_name();
-		$description = $product->get_description() ?: $product->get_short_description();
+		$title             = $product->get_name();
+		$clean_description = get_post_meta( $product->get_id(), '_cs_mfb_clean_description', true );
+		$description       = '' !== $clean_description ? $clean_description : ( $product->get_description() ?: $product->get_short_description() );
 		$price       = $product->get_regular_price() ?: $product->get_price();
 		$image_id    = (int) $product->get_image_id();
 		$brand       = get_post_meta( $product->get_id(), '_cs_mfb_brand', true );
@@ -145,6 +146,8 @@ class CodeSolz_MFB_Health_Score {
 			'RULE-D04' => 5,
 			'RULE-P01' => 15,
 			'RULE-P03' => 5,
+			'RULE-T09' => 6,
+			'RULE-ID05' => 10,
 		);
 
 		$deductions = apply_filters( 'cs_mfb_score_deductions', $deductions );
@@ -275,6 +278,7 @@ class CodeSolz_MFB_Health_Score {
 			(int) $product->get_image_id(),
 			(string) get_post_meta( $product->get_id(), '_cs_mfb_brand', true ),
 			(string) get_post_meta( $product->get_id(), '_cs_mfb_gtin', true ),
+			(string) get_post_meta( $product->get_id(), '_cs_mfb_clean_description', true ),
 			(string) $product->get_date_modified(),
 		) ) );
 	}
@@ -292,6 +296,7 @@ class CodeSolz_MFB_Health_Score {
 
 		update_post_meta( $product_id, CS_MFB_SCORE_META_KEY, $score );
 		update_post_meta( $product_id, CS_MFB_SCORE_META_TIMESTAMP, time() );
+		update_post_meta( $product_id, CS_MFB_HAS_ISSUES_META_KEY, empty( $issues ) ? '0' : '1' );
 
 		$table = $wpdb->prefix . CS_MFB_AUDIT_TABLE;
 		$wpdb->replace(

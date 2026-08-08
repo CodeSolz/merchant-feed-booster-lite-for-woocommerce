@@ -68,6 +68,7 @@ class CodeSolz_MFB_CLI {
 		WP_CLI::log( "Scanning up to {$limit} products…" );
 
 		$settings    = CodeSolz_MFB_Settings::all();
+		$dup_index   = CodeSolz_MFB_Health::build_duplicate_index();
 		$product_ids = get_posts( array(
 			'post_type'      => 'product',
 			'post_status'    => 'publish',
@@ -92,7 +93,7 @@ class CodeSolz_MFB_CLI {
 				$score  = $cached['score'];
 				$issues = $cached['issues'];
 			} else {
-				$issues = CodeSolz_MFB_Policy_Engine::run_all( $product, $settings );
+				$issues = CodeSolz_MFB_Policy_Engine::run_all( $product, $settings, $dup_index );
 				$score  = CodeSolz_MFB_Health_Score::calculate( $product, $issues, $settings );
 				CodeSolz_MFB_Health_Score::store( $product_id, $score, $issues, $hash );
 			}
@@ -152,8 +153,9 @@ class CodeSolz_MFB_CLI {
 			$score  = $cached['score'];
 			$issues = $cached['issues'];
 		} else {
-			$issues = CodeSolz_MFB_Policy_Engine::run_all( $product, $settings );
-			$score  = CodeSolz_MFB_Health_Score::calculate( $product, $issues, $settings );
+			$dup_index = CodeSolz_MFB_Health::build_duplicate_index();
+			$issues    = CodeSolz_MFB_Policy_Engine::run_all( $product, $settings, $dup_index );
+			$score     = CodeSolz_MFB_Health_Score::calculate( $product, $issues, $settings );
 			CodeSolz_MFB_Health_Score::store( $product_id, $score, $issues, $hash );
 		}
 
