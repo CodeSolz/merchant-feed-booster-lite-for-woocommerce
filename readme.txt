@@ -2,10 +2,10 @@
 Contributors: codesolz, m.tuhin
 Tags: google shopping, woocommerce, product feed, merchant center, google merchant feed
 Requires at least: 5.8
-Tested up to: 7.0
+Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 1.0.2
+Stable tag: 1.0.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -108,6 +108,15 @@ No. Everything runs on your server, and there's no tracking or telemetry. The pl
 5. Product edit screen — Brand, GTIN, MPN, Google Product Category, Condition fields, and health score meta box.
 
 == Changelog ==
+
+= 1.0.3 =
+* New: Improved product feed health validation for Google Merchant Center requirements
+* Improvement: Improved feed generation and scheduled refresh reliability
+* Improvement: Improved product health scoring and validation across titles, images, prices, identifiers, and descriptions
+* Improvement: Improved Feed Health reporting with clearer issue details and fix recommendations
+* Improvement: Various performance, stability, and code improvements
+* Fix: Fixed minor issues affecting background scanning and automatic product rescoring
+* Fix: Fixed feed preview and product validation edge cases
 
 = 1.0.2 =
 * New: Real feed-URL accessibility check (same-origin HTTP request, cached 15 minutes) — the Dashboard "Accessible" status now reflects an actual check instead of just "file exists".
