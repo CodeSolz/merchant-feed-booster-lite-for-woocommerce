@@ -5,7 +5,7 @@ Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 1.0.3
+Stable tag: 1.0.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -108,6 +108,9 @@ No. Everything runs on your server, and there's no tracking or telemetry. The pl
 5. Product edit screen — Brand, GTIN, MPN, Google Product Category, Condition fields, and health score meta box.
 
 == Changelog ==
+
+= 1.0.4 =
+* New: About Us page at the end of the Feed Booster menu: what this plugin does, where to get help, and the other CodeSolz plugins. Its icons ship with the plugin, so the page loads nothing from outside your site.
 
 = 1.0.3 =
 * New: Improved product feed health validation for Google Merchant Center requirements

@@ -15,6 +15,7 @@ class CodeSolz_MFB_Admin {
 	const SETTINGS_SLUG      = 'cs-mfb-settings';
 	const HEALTH_SLUG        = 'cs-mfb-health';
 	const PREVIEW_SLUG       = 'cs-mfb-preview';
+	const ABOUT_SLUG         = 'cs-mfb-about';
 	const REGEN_ACTION       = 'cs_mfb_regenerate_feed';
 	const CSV_EXPORT_ACTION  = 'cs_mfb_export_issues_csv';
 	const CLEAR_CACHE_ACTION = 'cs_mfb_clear_audit_cache';
@@ -25,6 +26,7 @@ class CodeSolz_MFB_Admin {
 	 */
 	public static function register() {
 		add_action( 'admin_menu', array( __CLASS__, 'menu' ) );
+		add_action( 'admin_menu', array( __CLASS__, 'move_about_to_end' ), 10000 );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
 		add_action( 'admin_post_' . self::REGEN_ACTION, array( __CLASS__, 'handle_regenerate' ) );
 		add_action( 'admin_post_' . self::CSV_EXPORT_ACTION, array( __CLASS__, 'handle_csv_export' ) );
@@ -99,6 +101,47 @@ class CodeSolz_MFB_Admin {
 		 * regardless of plugin load order or plugins_loaded priority.
 		 */
 		do_action( 'cs_mfb_register_admin_pages' );
+
+		// About Us — informational page, kept as the last item by move_about_to_end().
+		add_submenu_page(
+			self::MENU_SLUG,
+			__( 'About Us', 'merchant-feed-booster-lite-for-woocommerce' ),
+			__( 'About Us', 'merchant-feed-booster-lite-for-woocommerce' ),
+			$cap,
+			self::ABOUT_SLUG,
+			array( __CLASS__, 'render_about' )
+		);
+	}
+
+	/**
+	 * Keep About Us as the last submenu item, after any pages an extension
+	 * (Pro) registers later on admin_menu.
+	 */
+	public static function move_about_to_end() {
+		global $submenu;
+
+		if ( empty( $submenu[ self::MENU_SLUG ] ) || ! is_array( $submenu[ self::MENU_SLUG ] ) ) {
+			return;
+		}
+
+		foreach ( $submenu[ self::MENU_SLUG ] as $index => $item ) {
+			if ( isset( $item[2] ) && self::ABOUT_SLUG === $item[2] ) {
+				unset( $submenu[ self::MENU_SLUG ][ $index ] );
+				$submenu[ self::MENU_SLUG ]   = array_values( $submenu[ self::MENU_SLUG ] ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+				$submenu[ self::MENU_SLUG ][] = $item; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+				break;
+			}
+		}
+	}
+
+	/**
+	 * Render the About Us page.
+	 */
+	public static function render_about() {
+		if ( ! current_user_can( self::cap() ) ) {
+			wp_die( esc_html__( 'You do not have permission to access this page.', 'merchant-feed-booster-lite-for-woocommerce' ) );
+		}
+		include CS_MFB_PLUGIN_DIR . 'includes/views/about-us.php';
 	}
 
 	/**
@@ -166,6 +209,17 @@ class CodeSolz_MFB_Admin {
 	 * @param string $hook Current admin page hook.
 	 */
 	public static function enqueue_assets( $hook ) {
+		// The About Us page is self-contained: only its own stylesheet.
+		if ( '_page_' . self::ABOUT_SLUG === substr( (string) $hook, -strlen( '_page_' . self::ABOUT_SLUG ) ) ) {
+			wp_enqueue_style(
+				'cs-mfb-about',
+				CS_MFB_PLUGIN_URL . 'assets/about-us.css',
+				array(),
+				CS_MFB_VERSION
+			);
+			return;
+		}
+
 		if ( false === strpos( (string) $hook, 'cs-mfb' ) && 'toplevel_page_' . self::MENU_SLUG !== $hook ) {
 			return;
 		}
